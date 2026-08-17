@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="AgenticAiBlueprint.Api/AgenticAiBlueprint.Api.csproj" />
+  <Project Path="AgenticAiBlueprint.Contracts/AgenticAiBlueprint.Contracts.csproj" />
+  <Project Path="AgenticAiBlueprint.Web/AgenticAiBlueprint.Web.csproj" />
+</Solution>

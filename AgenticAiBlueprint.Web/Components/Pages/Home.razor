@@ -1,0 +1,161 @@
+@page "/"
+@rendermode InteractiveServer
+@inject AgenticApiClient Api
+
+<PageTitle>Agentic AI Blueprint — Goal Execution</PageTitle>
+
+<h1>Goal Execution</h1>
+
+<EditForm Model="@_goalDescription" OnValidSubmit="ExecuteGoalAsync">
+    <div class="mb-3">
+        <label class="form-label">Goal description</label>
+        <textarea class="form-control" rows="3" @bind="_goalDescription"></textarea>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Domain (optional)</label>
+        <input class="form-control" @bind="_domain" placeholder="Procurement, HR, Finance..." />
+    </div>
+    <button class="btn btn-primary" type="submit" disabled="@_isExecuting">
+        @(_isExecuting ? "Executing..." : "Execute Goal")
+    </button>
+</EditForm>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger mt-3">@_error</div>
+}
+
+@if (_result is not null)
+{
+    <hr />
+    <h2>Result</h2>
+    <p><strong>Success:</strong> @_result.Success &nbsp; <strong>Iterations used:</strong> @_result.IterationsUsed</p>
+    <p><strong>Final Answer:</strong> @_result.FinalAnswer</p>
+
+    <h3>Reflection Results</h3>
+    @if (_result.FinalReflection is { } reflection)
+    {
+        <ul>
+            <li>Goal Achieved: @reflection.GoalAchieved</li>
+            <li>Confidence: @reflection.ConfidenceLevel.ToString("F2")</li>
+            <li>Replanning Needed: @reflection.ReplanningNeeded</li>
+            <li>Escalation Needed: @reflection.EscalationNeeded</li>
+            <li>Missing Information: @(reflection.MissingInformation.Count > 0 ? string.Join(", ", reflection.MissingInformation) : "none")</li>
+            <li>Rationale: @reflection.Rationale</li>
+        </ul>
+    }
+
+    @if (_result.Escalation is { } escalation)
+    {
+        <h3>Escalation</h3>
+        <p><strong>Level:</strong> @escalation.Level &nbsp; <strong>Reason:</strong> @escalation.Reason</p>
+    }
+
+    <h3>Execution Trace</h3>
+    <table class="table table-sm">
+        <thead>
+            <tr><th>Iteration</th><th>Agent</th><th>Action</th><th>Success</th><th>Details</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var step in _result.ExecutionSteps)
+            {
+                <tr>
+                    <td>@step.Iteration</td>
+                    <td>@step.AgentName</td>
+                    <td>@step.Action</td>
+                    <td>@step.Success</td>
+                    <td>@step.Details</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <h3>Replanning History</h3>
+    @if (_result.ReplanningEvents.Count == 0)
+    {
+        <p><em>No replanning occurred.</em></p>
+    }
+    else
+    {
+        <ul>
+            @foreach (var evt in _result.ReplanningEvents)
+            {
+                <li>Iteration @evt.Iteration: @evt.Reason</li>
+            }
+        </ul>
+    }
+
+    <h3>Agent Contribution Viewer</h3>
+    <table class="table table-sm">
+        <thead>
+            <tr><th>Agent</th><th>Type</th><th>Content</th><th>Confidence</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var contribution in _result.Contributions)
+            {
+                <tr>
+                    <td>@contribution.AgentName</td>
+                    <td>@contribution.Type</td>
+                    <td>@contribution.Content</td>
+                    <td>@contribution.Confidence.ToString("F2")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <h3>Working Memory Viewer</h3>
+    <table class="table table-sm">
+        <thead>
+            <tr><th>Key</th><th>Value</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var kv in _result.WorkingMemorySnapshot)
+            {
+                <tr>
+                    <td>@kv.Key</td>
+                    <td>@kv.Value</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private string _goalDescription = string.Empty;
+    private string _domain = string.Empty;
+    private bool _isExecuting;
+    private string? _error;
+    private AgentExecutionResponse? _result;
+
+    private async Task ExecuteGoalAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_goalDescription))
+        {
+            _error = "Please enter a goal description.";
+            return;
+        }
+
+        _isExecuting = true;
+        _error = null;
+        _result = null;
+
+        try
+        {
+            var goal = new AgentGoal
+            {
+                Description = _goalDescription,
+                Domain = string.IsNullOrWhiteSpace(_domain) ? null : _domain
+            };
+
+            _result = await Api.ExecuteGoalAsync(goal);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to execute goal: {ex.Message}";
+        }
+        finally
+        {
+            _isExecuting = false;
+        }
+    }
+}

@@ -1,0 +1,68 @@
+@page "/control-tower"
+@rendermode InteractiveServer
+@inject AgenticApiClient Api
+
+<PageTitle>Control Tower Dashboard</PageTitle>
+
+<h1>Control Tower Dashboard</h1>
+
+@if (_dashboard is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <h3>Historical Trends</h3>
+    <ul>
+        @foreach (var trend in _dashboard.HistoricalTrends)
+        {
+            <li>@trend.Key: @trend.Value interaction(s)</li>
+        }
+    </ul>
+
+    <h3>Executive Recommendations</h3>
+    <table class="table table-sm">
+        <thead>
+            <tr><th>Problem</th><th>Recommendation</th><th>Expected Impact</th><th>Priority</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var rec in _dashboard.Recommendations)
+            {
+                <tr>
+                    <td>@rec.Problem</td>
+                    <td>@rec.Recommendation</td>
+                    <td>@rec.ExpectedImpact</td>
+                    <td>@rec.Priority</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <h3>Recent Interactions</h3>
+    <table class="table table-sm">
+        <thead>
+            <tr><th>Goal</th><th>Domain</th><th>Outcome</th><th>Confidence</th><th>Timestamp</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var interaction in _dashboard.RecentInteractions)
+            {
+                <tr>
+                    <td>@interaction.GoalDescription</td>
+                    <td>@interaction.Domain</td>
+                    <td>@interaction.Outcome</td>
+                    <td>@interaction.Confidence.ToString("F2")</td>
+                    <td>@interaction.Timestamp</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private ControlTowerDashboard? _dashboard;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _dashboard = await Api.GetDashboardAsync();
+    }
+}

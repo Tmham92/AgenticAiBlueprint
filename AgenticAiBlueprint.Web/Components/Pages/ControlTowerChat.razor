@@ -1,0 +1,53 @@
+@page "/control-tower/chat"
+@rendermode InteractiveServer
+@inject AgenticApiClient Api
+
+<PageTitle>Control Tower Chat</PageTitle>
+
+<h1>Control Tower Chat</h1>
+
+<div class="mb-3" style="max-height: 400px; overflow-y: auto;">
+    @foreach (var message in _history)
+    {
+        <p><strong>@message.Role:</strong> @message.Content</p>
+    }
+</div>
+
+<EditForm Model="@_message" OnValidSubmit="SendAsync">
+    <div class="input-group">
+        <input class="form-control" @bind="_message" placeholder="Ask the Control Tower..." />
+        <button class="btn btn-primary" type="submit" disabled="@_isSending">Send</button>
+    </div>
+</EditForm>
+
+@code {
+    private string _message = string.Empty;
+    private bool _isSending;
+    private readonly List<ControlTowerChatMessage> _history = new();
+
+    private async Task SendAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_message))
+        {
+            return;
+        }
+
+        _isSending = true;
+        var userMessage = new ControlTowerChatMessage { Role = "user", Content = _message };
+        _history.Add(userMessage);
+
+        try
+        {
+            var response = await Api.ChatAsync(new ControlTowerChatRequest { Message = _message, History = _history });
+            if (response is not null)
+            {
+                _history.Add(new ControlTowerChatMessage { Role = "assistant", Content = response.Reply });
+            }
+        }
+        finally
+        {
+            _message = string.Empty;
+            _isSending = false;
+        }
+    }
+}
